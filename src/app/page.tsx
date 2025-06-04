@@ -129,12 +129,12 @@ export default function Home() {
         <section className="md:col-span-2 space-y-8">
           <div className="flex justify-between items-center mb-2">
             <h2 className="text-xl font-semibold text-neutral-800">Your Letters</h2>
-            <button
+            <Link
+              href="/letters/new"
               className="border border-neutral-400 bg-[#f3ede5] text-neutral-700 hover:text-neutral-800 rounded px-4 py-2 font-medium shadow hover:bg-[#ede6db] transition"
-              // onClick={() => { /* TODO: Implement New Letter functionality, e.g., navigate to an editor page or open a modal */ }}
             >
               + New Letter
-            </button>
+            </Link>
           </div>
           <div className="space-y-4">
             <div className="border border-[#e6dfd2] bg-[#f9f6f2] rounded-lg p-4 flex justify-between items-center">
