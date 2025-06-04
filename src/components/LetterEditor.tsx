@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 // Rimuoviamo temporaneamente useAuth per lo sviluppo
 // import { useAuth } from '../lib/hooks/useAuth';
 import { upsertLetter, shareLetter } from '../lib/supabase/dbFunctions';
@@ -41,31 +41,7 @@ export default function LetterEditor({
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Auto-save functionality
-  useEffect(() => {
-    if (!user || !recipientId || !autoSaveEnabled || readOnly) return;
-
-    // Clear any existing timer
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
-
-    // Set a new timer to save after 2 seconds of inactivity
-    autoSaveTimerRef.current = setTimeout(async () => {
-      if (content.trim()) {
-        await saveDraft();
-      }
-    }, 2000);
-
-    // Cleanup function to clear the timer when component unmounts
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-    };
-  }, [content, user, recipientId, autoSaveEnabled]);
-
-  const saveDraft = async () => {
+  const saveDraft = useCallback(async () => {
     if (!user || !recipientId) return;
 
     setIsSaving(true);
@@ -86,7 +62,31 @@ export default function LetterEditor({
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [user, recipientId, letterId, content, onSave]);
+
+  // Auto-save functionality
+  useEffect(() => {
+    if (!user || !recipientId || !autoSaveEnabled || readOnly) return;
+
+    // Clear any existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    // Set a new timer to save after 2 seconds of inactivity
+    autoSaveTimerRef.current = setTimeout(async () => {
+      if (content.trim()) {
+        await saveDraft(); // saveDraft is now defined above
+      }
+    }, 2000);
+
+    // Cleanup function to clear the timer when component unmounts
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [content, user, recipientId, autoSaveEnabled, readOnly, saveDraft, onSave]); // saveDraft in deps is now fine
 
   const handleShareLetter = async () => {
     if (!user || !recipientId) return;

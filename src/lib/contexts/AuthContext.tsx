@@ -11,6 +11,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any } | void>; // Allow returning error for UI handling
   signOut: () => Promise<void>;
+  signInWithGoogle: () => Promise<{ error: any } | void>; // Added for Google Sign-In
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signIn: async (email, password) => { return { error: 'Context not ready' }; },
   signOut: async () => {},
+  signInWithGoogle: async () => { return { error: 'Context not ready' }; }, // Added for Google Sign-In
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -90,8 +92,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithGoogle = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          // Optional: Add redirectTo if you need to redirect to a specific page after login
+          // redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) {
+        console.error('Error signing in with Google:', error);
+        setLoading(false);
+        return { error };
+      }
+      // Supabase handles the redirect and session update via onAuthStateChange
+      // No explicit user/session setting here needed immediately after this call
+    } catch (error) {
+      console.error('Exception during Google sign in:', error);
+      setLoading(false);
+      return { error: error || new Error('An unexpected error occurred during Google sign-in') };
+    }
+    // setLoading(false) will be handled by onAuthStateChange or if an error occurs
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signIn, signOut, signInWithGoogle }}>
       {children}
     </AuthContext.Provider>
   );

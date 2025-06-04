@@ -9,26 +9,54 @@ export default function NewLetterPage() {
   const authContext = useContext(AuthContext);
   const router = useRouter();
 
-  if (!authContext) {
-    console.error("AuthContext is not available in NewLetterPage");
-    useEffect(() => {
-      router.push('/'); 
-    }, [router]);
-    return <div className="min-h-screen bg-[#f6f1ea] font-serif flex justify-center items-center"><p className="text-xl text-red-500">Error: Auth context not found. Redirecting...</p></div>;
+  // Combined useEffect for auth state management
+  useEffect(() => {
+    // Case 1: AuthContext itself is not yet available
+    if (authContext === undefined) {
+      console.log("NewLetterPage: AuthContext is undefined. Waiting for provider.");
+      return; // Do nothing until context is defined
+    }
+
+    // Case 2: AuthContext provider explicitly passed null
+    if (authContext === null) {
+      console.error("NewLetterPage: AuthContext is null. Redirecting to /.");
+      router.push('/');
+      return;
+    }
+
+    // Case 3: AuthContext is an object, check user and loading state
+    const { user, loading } = authContext; // user and loading are scoped to this effect
+    if (!loading && !user) {
+      console.log("NewLetterPage: Not loading and no user. Redirecting to /.");
+      router.push('/');
+    }
+  }, [authContext, router]);
+
+  // Rendering logic after all hooks
+  // First, handle cases where authContext itself is not ready
+  if (authContext === undefined) {
+    return (
+      <div className="min-h-screen bg-[#f6f1ea] font-serif flex justify-center items-center">
+        <p className="text-xl text-neutral-700">Initializing authentication...</p>
+      </div>
+    );
   }
 
-  const { user, loading, signOut } = authContext;
+  if (authContext === null) {
+    return (
+      <div className="min-h-screen bg-[#f6f1ea] font-serif flex justify-center items-center">
+        <p className="text-xl text-red-500">Authentication context error. Redirecting...</p>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push('/'); 
-    }
-  }, [user, loading, router]);
+  // If authContext is valid, destructure user and loading for rendering checks
+  const { user, loading, signOut } = authContext; // signOut is now correctly accessed after authContext checks
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f6f1ea] font-serif flex justify-center items-center">
-        <p className="text-xl text-neutral-700">Loading...</p>
+        <p className="text-xl text-neutral-700">Loading user data...</p>
       </div>
     );
   }
@@ -36,9 +64,9 @@ export default function NewLetterPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-[#f6f1ea] font-serif flex justify-center items-center">
-        <p className="text-xl text-neutral-700">Redirecting...</p>
+        <p className="text-xl text-neutral-700">No user session. Redirecting...</p>
       </div>
-    ); 
+    );
   }
 
   return (

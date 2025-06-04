@@ -9,43 +9,68 @@ export default function Dashboard() {
   const authContext = useContext(AuthContext);
   const router = useRouter();
 
-  // Check if AuthContext is available
-  if (!authContext) {
-    // This can happen if the component is rendered outside AuthProvider
-    // Or if AuthContext is not correctly exported/imported
-    console.error("AuthContext is not available");
-    // Optionally, redirect to an error page or home
-    useEffect(() => {
-      router.push('/'); 
-    }, [router]);
-    return <div className="min-h-screen bg-[#f6f1ea] font-serif flex justify-center items-center"><p className="text-xl text-red-500">Error: Auth context not found. Redirecting...</p></div>;
+  // Combined useEffect for auth state management
+  useEffect(() => {
+    // Case 1: AuthContext itself is not yet available (e.g., provider hasn't mounted or passed value)
+    if (authContext === undefined) {
+      console.log("Dashboard: AuthContext is undefined. Waiting for provider.");
+      return; // Do nothing until context is defined
+    }
+
+    // Case 2: AuthContext provider explicitly passed null (e.g., error during its own init, or deliberate unauthenticated state)
+    if (authContext === null) {
+      console.error("Dashboard: AuthContext is null. Redirecting to /.");
+      router.push('/');
+      return;
+    }
+
+    // Case 3: AuthContext is an object, proceed to check user and loading state
+    const { user, loading } = authContext; // user and loading are scoped to this effect
+    if (!loading && !user) {
+      console.log("Dashboard: Not loading and no user. Redirecting to /.");
+      router.push('/');
+    }
+  }, [authContext, router]);
+
+  // Rendering logic after all hooks
+  // First, handle cases where authContext itself is not ready
+  if (authContext === undefined) {
+    return (
+      <div className="min-h-screen bg-[#f6f1ea] font-serif flex justify-center items-center">
+        <p className="text-xl text-neutral-700">Initializing authentication...</p>
+      </div>
+    );
   }
 
-  const { user, loading } = authContext;
+  if (authContext === null) {
+    // This state implies an issue with the AuthProvider or a deliberate 'logged out' state passed as null.
+    // The useEffect should handle redirection. This UI is a fallback.
+    return (
+      <div className="min-h-screen bg-[#f6f1ea] font-serif flex justify-center items-center">
+        <p className="text-xl text-red-500">Authentication context error. Redirecting...</p>
+      </div>
+    );
+  }
 
-  useEffect(() => {
-    if (!loading && !user) {
-      // If not loading and no user, redirect to homepage (or a login page)
-      router.push('/'); 
-    }
-  }, [user, loading, router]);
+  // If authContext is valid, destructure user and loading for rendering checks
+  const { user, loading } = authContext;
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f6f1ea] font-serif flex justify-center items-center">
-        <p className="text-xl text-neutral-700">Loading...</p>
+        <p className="text-xl text-neutral-700">Loading user data...</p>
       </div>
     );
   }
 
   if (!user) {
-    // This case should ideally be handled by the useEffect redirect,
-    // but it's good practice for robustness or if redirect hasn't happened yet.
+    // Not loading, but no user. useEffect should have redirected.
+    // This UI is a fallback during redirection.
     return (
       <div className="min-h-screen bg-[#f6f1ea] font-serif flex justify-center items-center">
-        <p className="text-xl text-neutral-700">Redirecting...</p>
+        <p className="text-xl text-neutral-700">No user session. Redirecting...</p>
       </div>
-    ); 
+    );
   }
 
   // If user is authenticated, show the dashboard content
