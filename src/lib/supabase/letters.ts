@@ -38,6 +38,12 @@ export const saveLetter = async (letterData: Letter): Promise<{ data: Letter | n
     updated_at: new Date().toISOString(), // Explicitly set updated_at for upsert
   };
 
+  // DEBUG: Log current session before database operation
+  const { data: { session: currentSessionDebug } } = await supabase.auth.getSession();
+  console.log('[saveLetter] Current Supabase session before DB op:', currentSessionDebug);
+  console.log('[saveLetter] User from session:', currentSessionDebug?.user?.id);
+  console.log('[saveLetter] Role from session:', currentSessionDebug?.user?.role);
+
   let response;
   if (id) {
     // Update existing letter
