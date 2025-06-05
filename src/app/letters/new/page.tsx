@@ -1,11 +1,16 @@
 "use client";
 
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { AuthContext } from '../../../lib/contexts/AuthContext'; // Adjusted path
+import { saveLetter, Letter } from '../../../lib/supabase/letters'; // Added import
 
 export default function NewLetterPage() {
+  const [letterContent, setLetterContent] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const authContext = useContext(AuthContext);
   const router = useRouter();
 
@@ -51,7 +56,44 @@ export default function NewLetterPage() {
   }
 
   // If authContext is valid, destructure user and loading for rendering checks
-  const { user, loading, signOut } = authContext; // signOut is now correctly accessed after authContext checks
+  const { user, loading, signOut } = authContext;
+
+  const handleSaveDraft = async () => {
+    if (!user) {
+      setSaveError('You must be logged in to save a draft.');
+      return;
+    }
+    console.log('Current user for saving draft:', JSON.stringify(user, null, 2));
+    if (!letterContent.trim()) {
+      setSaveError('Cannot save an empty letter.');
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(null);
+
+    const letterData: Letter = {
+      author_id: user.id,
+      content: letterContent,
+      is_draft: true,
+      // recipient_id can be null for drafts initially
+    };
+    console.log('Letter data being sent to Supabase:', JSON.stringify(letterData, null, 2));
+
+    const { data, error } = await saveLetter(letterData);
+
+    setIsSaving(false);
+    if (error) {
+      console.error('Error saving draft:', error);
+      setSaveError(`Failed to save draft: ${error.message}`);
+    } else {
+      setSaveSuccess('Draft saved successfully!');
+      setLetterContent(''); // Clear textarea after successful save
+      // Optionally, redirect to dashboard or the new draft's edit page
+      // router.push('/dashboard');
+    }
+  };
 
   if (loading) {
     return (
@@ -101,10 +143,19 @@ export default function NewLetterPage() {
           <textarea 
             className="w-full h-96 p-4 border border-neutral-300 rounded-md focus:ring-2 focus:ring-neutral-500 focus:border-neutral-500 transition duration-150 ease-in-out resize-none text-neutral-800 placeholder-neutral-400"
             placeholder="Start writing your letter here..."
+            value={letterContent}
+            onChange={(e) => setLetterContent(e.target.value)}
+            disabled={isSaving}
           ></textarea>
+          {saveError && <p className="text-red-500 text-sm mt-2">{saveError}</p>}
+          {saveSuccess && <p className="text-green-500 text-sm mt-2">{saveSuccess}</p>}
           <div className="mt-6 flex justify-end space-x-4">
-            <button className="px-6 py-2 border border-neutral-400 text-neutral-700 rounded-md hover:bg-neutral-100 transition">
-              Save Draft
+            <button 
+              onClick={handleSaveDraft}
+              className="px-6 py-2 border border-neutral-400 text-neutral-700 rounded-md hover:bg-neutral-100 transition disabled:opacity-50"
+              disabled={isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Save Draft'}
             </button>
             <button className="px-6 py-2 bg-neutral-700 text-white rounded-md hover:bg-neutral-800 transition">
               Send Letter
